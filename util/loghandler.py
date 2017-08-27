@@ -14,10 +14,6 @@ log = logging.getLogger("log")
 	
 log.setLevel(logging.DEBUG)
 
-# Debug log file
-dlog = logging.FileHandler("%s_debug.log" % LOGPREFIX)
-dlog.setLevel(logging.DEBUG)
-
 # Error log file
 elog = logging.FileHandler("%s_error.log" % LOGPREFIX)
 elog.setLevel(logging.ERROR)
@@ -29,9 +25,7 @@ clog.setLevel(CONSOLELOGLEVEL)
 formatter = logging.Formatter("%(asctime)s - %(module)-20s - %(message)s")
 
 clog.setFormatter(formatter)
-dlog.setFormatter(formatter)
 elog.setFormatter(formatter)
 
-log.addHandler(dlog)
 log.addHandler(elog)
 log.addHandler(clog)
