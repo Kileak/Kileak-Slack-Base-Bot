@@ -32,8 +32,6 @@ class ConsoleThread(threading.Thread):
 					self.botserver.quit()
 					break
 
-				if cmd == "setlog":
-
 				# Example command: Useless, but just an example, for what console handler could do
 				elif cmd == "createchannel":
 					if len(parts)<2:

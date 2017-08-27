@@ -1,8 +1,10 @@
 #!/usr/bin/python
 import logging
+import os
 
 CONSOLELOGLEVEL = logging.DEBUG
-LOGPREFIX = "logs/bot"
+LOGDIR = "logs"
+LOGPREFIX = "bot"
 
 """
 Someone fix this ;)
@@ -15,7 +17,10 @@ log = logging.getLogger("log")
 log.setLevel(logging.DEBUG)
 
 # Error log file
-elog = logging.FileHandler("%s_error.log" % LOGPREFIX)
+if not os.path.exists(LOGDIR):
+	os.makedirs(LOGDIR)
+	
+elog = logging.FileHandler(os.path.join(LOGDIR, "%s_error.log" % LOGPREFIX))
 elog.setLevel(logging.ERROR)
 
 # Console logging
