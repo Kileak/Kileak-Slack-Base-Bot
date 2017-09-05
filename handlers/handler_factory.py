@@ -1,78 +1,93 @@
-#!/usr/bin/python
-from util.loghandler import *
 import shlex
 from unidecode import unidecode
+from util.loghandler import *
+from bottypes.invalid_command import *
 
-"""
-	Every handler should initialize the `commands` dictionary with the commands he can handle and the corresponding command class
 
-	The handler factory will then check, if the handler can process a command, resolve it and execute it	
-"""	
 class HandlerFactory():
-	handlers = {}
-	
-	def registerHandler(handler_name, handler):
-		log.info("Registering new handler: %s (%s)" % (handler_name, handler.__class__.__name__))
+    """
+    Every handler should initialize the `commands` dictionary with the commands
+    he can handle and the corresponding command class
 
-		HandlerFactory.handlers[handler_name] = handler
+    The handler factory will then check, if the handler can process a command, resolve it and execute it
+    """
+    handlers = {}
 
-	"""
-		Initializes all handler with common information.
+    def register(handler_name, handler):
+        log.info("Registering new handler: %s (%s)" %
+                 (handler_name, handler.__class__.__name__))
 
-		Might remove bot_id from here later on?
-	"""
-	def initializeHandlers(slack_client, bot_id):
-		for handler in HandlerFactory.handlers:
-			HandlerFactory.handlers[handler].init(slack_client, bot_id)
+        HandlerFactory.handlers[handler_name] = handler
+        handler.handler_name = handler_name
 
-	def getHandler(handler_name):
-		if handler_name in HandlerFactory.handlers:
-			return HandlerFactory.handlers[handler_name]
+    def initialize(slack_client, bot_id):
+        """
+        Initializes all handler with common information.
 
-		return None
+        Might remove bot_id from here later on?
+        """
+        for handler in HandlerFactory.handlers:
+            HandlerFactory.handlers[handler].init(slack_client, bot_id)
 
-	def process(slack_client, msg, channel, user):
-		log.debug("Processing message: %s from %s (%s)" % (msg, channel, user))
+    def process(slack_client, botserver, msg, channel, user):
+        log.debug("Processing message: %s from %s (%s)" % (msg, channel, user))
 
-		try:
-			command_line = unidecode(msg.lower())
-			args = shlex.split(command_line)
-		except:      		
-			message = "Command failed : Malformed input."
-			slack_client.api_call("chat.postMessage", channel=channel, text=message, as_user=True)
-			return
+        try:
+            command_line = unidecode(msg.lower())
+            args = shlex.split(command_line)
+        except:
+            message = "Command failed : Malformed input."
+            slack_client.api_call("chat.postMessage",
+                                  channel=channel, text=message, as_user=True)
+            return
 
-		try:
-			handler_name = args[0]
-	
-			processed = False
-	
-			if handler_name in HandlerFactory.handlers:
-				# Call a specific handler with this command
-				handler = HandlerFactory.getHandler(handler_name)
-	
-				if len(args) < 2:
-					# Try to call help command for specified handler				
-					handler.process(slack_client, "help", "", channel, user)
-					processed = True
-				else:
-					command = args[1]
-	
-					if handler.canHandle(command):					
-						handler.process(slack_client, command, args[2:], channel, user)
-						processed = True
-			else:
-				# Pass the command to every available handler
-				command = args[0]
-					
-				for handler in HandlerFactory.handlers.values():		
-					if handler.canHandle(command):
-						processed = True
-						handler.process(slack_client, command, args[1:], channel, user)
-	
-			if not processed:
-				msg = "Unknown handler or command : `%s`" % msg
-				slack_client.api_call("chat.postMessage", channel=channel, text=msg, as_user=True)
-		except Exception as ex:
-			log.error("An error has occured while processing a command: %s" % ex)
-						
+        try:
+            handler_name = args[0]
+
+            processed = False
+
+            usage_msg = ""
+
+            # Call a specific handler with this command
+            handler = HandlerFactory.handlers.get(handler_name)
+            if handler:
+                if (len(args) < 2) or (args[1] == "help"):
+                    # Generic help handling
+                    usage_msg += handler.usage
+                    processed = True
+                else:
+                    command = args[1]
+
+                    if handler.can_handle(command):
+                        handler.process(slack_client, command,
+                                        args[2:], channel, user)
+                        processed = True
+            else:
+                # Pass the command to every available handler
+                command = args[0]
+
+                for handler_name in HandlerFactory.handlers:
+                    handler = HandlerFactory.handlers[handler_name]
+
+                    if command == "help":
+                        usage_msg += handler.usage
+                        processed = True
+                    elif handler.can_handle(command):
+                        handler.process(slack_client, command,
+                                        args[1:], channel, user)
+                        processed = True
+
+            if not processed:
+                msg = "Unknown handler or command : `%s`" % msg
+                slack_client.api_call("chat.postMessage",
+                                      channel=channel, text=msg, as_user=True)
+
+            if usage_msg:
+                slack_client.api_call("chat.postMessage",
+                                      channel=user if botserver.get_config_option("send_help_as_dm")=="1" else channel, text=usage_msg, as_user=True)
+
+        except InvalidCommand as e:
+            slack_client.api_call(
+                "chat.postMessage", channel=channel, text=e.message, as_user=True)
+        except Exception as ex:
+            log.exception("An error has occured while processing a command")

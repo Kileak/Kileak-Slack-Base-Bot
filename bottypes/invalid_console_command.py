@@ -1,6 +1,6 @@
-class InvalidCommand(Exception):
+class InvalidConsoleCommand(Exception):
     """
-    Exception for invalid commands.
+    Exception for invalid console commands.
     The message should be the usage for that command.
     """
 
