@@ -1,5 +1,4 @@
 __all__ = [
-    "challenge_handler",
-    "syscalls_handler",
+    "remoteserver_handler",    
     "bot_handler"
 ]

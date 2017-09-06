@@ -107,7 +107,7 @@ class BotServer(threading.Thread):
         message_list = slackMessage
 
         for msg in message_list:
-            if msg.get("type") == "message":
+            if msg.get("type") == "message":                
                 if self.botAT in msg.get("text", ""):
                     # return text after the @ mention, whitespace removed
                     return msg['text'].split(self.botAT)[1].strip().lower(), msg['channel'], msg['user']
