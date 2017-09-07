@@ -16,7 +16,12 @@ class AddServerCommand(Command):
     def execute(self, slack_client, args, channel_id, user_id):
         name = args[0]
 
-        server = RemoteServer(name)
+        if len(args)>1:
+            alias = args[1]
+        else:
+            alias = ""
+
+        server = RemoteServer(name, alias)
 
         try:
             serverlist = pickle.load(open(RemoteServerHandler.DB, "rb"))
@@ -33,8 +38,32 @@ class AddServerCommand(Command):
             message = "Couldn't add server `{}` (Already in list)".format(name)
             slack_client.api_call("chat.postMessage", channel=channel_id, text=message.strip(), as_user=True, parse="full")
 
-        pickle.dump(serverlist, open(RemoteServerHandler.DB, "wb"))aaaaaaaaaaaaaaa
+        pickle.dump(serverlist, open(RemoteServerHandler.DB, "wb"))
         
+class SetAliasCommand(Command):
+    """
+    Add and keep track of a new CTF.
+    """
+
+    def execute(self, slack_client, args, channel_id, user_id):
+        name = args[0]
+        alias = args[1]
+
+        try:
+            serverlist = pickle.load(open(RemoteServerHandler.DB, "rb"))
+        except:
+            serverlist = {}
+
+        if name in serverlist:
+            serverlist[name].setalias(alias)
+            
+            message = "Set alias for server: `{}` => `{}`".format(name, alias)
+            slack_client.api_call("chat.postMessage", channel=channel_id, text=message.strip(), as_user=True, parse="full")
+        else:
+            message = "Couldn't set alias for server `{}` (Not in list)".format(name)
+            slack_client.api_call("chat.postMessage", channel=channel_id, text=message.strip(), as_user=True, parse="full")
+
+        pickle.dump(serverlist, open(RemoteServerHandler.DB, "wb"))  
 
 class RemoveServerCommand(Command):
     """
@@ -68,10 +97,17 @@ class RequestServerCommand(Command):
     def execute(self, slack_client, args, channel_id, user_id):
         name = args[0]
         
+        server = None
+
         try:
             serverlist = pickle.load(open(RemoteServerHandler.DB, "rb"))
 
-            server = serverlist[name]
+            for s in serverlist:                
+                test = serverlist[s]
+
+                if s == name or test.alias == name:
+                    server = serverlist[s]
+                    break
         except:
             serverlist = {}
             server = None
@@ -87,7 +123,7 @@ class RequestServerCommand(Command):
                 server.occupied = True
                 server.occupiedBy = member['user']['name']
 
-                message = "Remote server `{}` is reserved for you".format(name)
+                message = "Remote server `{}` is reserved for you".format(server.name)
                 slack_client.api_call("chat.postMessage", channel=channel_id, text=message.strip(), as_user=True)                
 
                 pickle.dump(serverlist, open(RemoteServerHandler.DB, "wb"))
@@ -104,10 +140,17 @@ class ReleaseServerCommand(Command):
     def execute(self, slack_client, args, channel_id, user_id):
         name = args[0]
         
+        server = None
+
         try:
             serverlist = pickle.load(open(RemoteServerHandler.DB, "rb"))
 
-            server = serverlist[name]
+            for s in serverlist:                
+                test = serverlist[s]
+
+                if s == name or test.alias == name:
+                    server = serverlist[s]
+                    break
         except:
             serverlist = {}
             server = None
@@ -117,7 +160,7 @@ class ReleaseServerCommand(Command):
                 server.occupied = False
                 server.occupiedBy = ""
 
-                message = "Remote server is released: {}".format(name)
+                message = "Remote server is released: {}".format(server.name)
                 slack_client.api_call("chat.postMessage", channel=channel_id, text=message.strip(), as_user=True, parse="full")                
 
                 pickle.dump(serverlist, open(RemoteServerHandler.DB, "wb"))
@@ -143,9 +186,9 @@ class RemoteServerStatusCommand(Command):
         
         for server in serverlist:
             if serverlist[server].occupied:
-                message += ":no_entry_sign: *{}* - {}\n".format(server, transliterate(serverlist[server].occupiedBy))
+                message += ":no_entry_sign: *{}* ({}) - {}\n".format(server, serverlist[server].alias, transliterate(serverlist[server].occupiedBy))
             else:
-                message += ":white_check_mark: *{}* - free \n".format(server)
+                message += ":white_check_mark: *{}* ({}) - free \n".format(server, serverlist[server].alias)
 
         # Notify people of new channel        
         slack_client.api_call("chat.postMessage", channel=channel_id, text=message.strip(), as_user=True, parse="full")
@@ -172,10 +215,11 @@ class RemoteServerHandler(BaseHandler):
     
     def __init__(self):
         self.commands = {
-            "addserver": CommandDesc(AddServerCommand, "Adds a new server to watch", ["server_name"], None),
+            "addserver": CommandDesc(AddServerCommand, "Adds a new server to watch", ["server_name"], ["alias"]),
+            "setalias": CommandDesc(SetAliasCommand, "Sets an alias for a server", ["server_name", "alias"], None),
             "removeserver": CommandDesc(RemoveServerCommand, "Removes a server to watch", ["server_name"], None),
-            "request" : CommandDesc(RequestServerCommand, "Request server access", ["server_name"], None),
-            "release" : CommandDesc(ReleaseServerCommand, "Release a server access", ["server_name"], ["force"]),            
+            "r" : CommandDesc(RequestServerCommand, "Request server access", ["server_name"], None),
+            "f" : CommandDesc(ReleaseServerCommand, "Release a server access", ["server_name"], ["force"]),            
             "status" : CommandDesc(RemoteServerStatusCommand, "Show server status", None, None)
         }
 

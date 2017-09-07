@@ -1,9 +1,10 @@
 class RemoteServer:
 
-    def __init__(self, name):
+    def __init__(self, name, alias):
         self.name = name
         self.occupied = False
         self.occupiedBy = ""
+        self.alias = alias
 
     def request(self, user):
         if not self.occupied:
@@ -13,6 +14,10 @@ class RemoteServer:
     def release(self):
         self.occupied = False
         self.occupiedBy = ""
+
+
+    def setalias(self, alias):
+        self.alias = alias
 
     def add_challenge(self, challenge):
         """
