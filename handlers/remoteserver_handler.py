@@ -131,6 +131,18 @@ class RequestServerCommand(Command):
                 message = "Remote server `{}` doesn't exist.".format(name)
                 slack_client.api_call("chat.postMessage", channel=channel_id, text=message.strip(), as_user=True)                
 
+        print (channel_id)
+        message = "*======== Server status ========*\n"
+        
+        for server in serverlist:
+            if serverlist[server].occupied:
+                message += ":no_entry_sign: *{}* ({}) - {}\n".format(server, serverlist[server].alias, transliterate(serverlist[server].occupiedBy))
+            else:
+                message += ":white_check_mark: *{}* ({}) - free \n".format(server, serverlist[server].alias)
+
+        # Notify people of new channel        
+        slack_client.api_call("chat.postMessage", channel=channel_id, text=message.strip(), as_user=True, parse="full")
+
 
 class ReleaseServerCommand(Command):
     """
@@ -170,6 +182,19 @@ class ReleaseServerCommand(Command):
         else:
                 message = "Remote server `{}` doesn't exist.".format(name)
                 slack_client.api_call("chat.postMessage", channel=channel_id, text=message.strip(), as_user=True, parse="full")                
+
+        print (channel_id)
+
+        message = "*======== Server status ========*\n"
+        
+        for server in serverlist:
+            if serverlist[server].occupied:
+                message += ":no_entry_sign: *{}* ({}) - {}\n".format(server, serverlist[server].alias, transliterate(serverlist[server].occupiedBy))
+            else:
+                message += ":white_check_mark: *{}* ({}) - free \n".format(server, serverlist[server].alias)
+
+        # Notify people of new channel        
+        slack_client.api_call("chat.postMessage", channel=channel_id, text=message.strip(), as_user=True, parse="full")
 
         
 
